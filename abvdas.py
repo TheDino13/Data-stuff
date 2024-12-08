@@ -27,3 +27,17 @@ if not node_data.empty:
     print(f"Координаты для узла {node_id}: X={x}, Y={y}\n")
 else:
     print(f"Узел {node_id} не найден.\n")
+
+def calculate_distance(node1, node2, coordinates):
+    node1_data = coordinates[coordinates["NodeID"] == node1].iloc[0]
+    node2_data = coordinates[coordinates["NodeID"] == node2].iloc[0]
+    x1, y1 = node1_data["X"], node1_data["Y"]
+    x2, y2 = node2_data["X"], node2_data["Y"]
+    distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+    return distance
+
+# Example usage:
+node1_id = 1
+node2_id = 5
+distance = calculate_distance(node1_id, node2_id, coordinates)
+print(f"Distance between node {node1_id} and node {node2_id}: {distance:.2f}")

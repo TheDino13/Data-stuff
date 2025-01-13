@@ -205,4 +205,6 @@ if __name__ == "__main__":
     best_solution, best_fitness = run_genetic_algorithm_roulette(coordinates)
     print("\nBest Solution:")
     print_solution_info(best_solution, best_fitness)
+    
+    
 

@@ -206,5 +206,3 @@ if __name__ == "__main__":
     print("\nBest Solution:")
     print_solution_info(best_solution, best_fitness)
     
-    
-

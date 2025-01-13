@@ -3,12 +3,22 @@ import pandas as pd
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import filedialog
 
-# 1. Парсинг TSP файла
-def read_tsp_with_pandas(file_path="E:\\xd\\docs\\berlin52.tsp"):
-    """
-    Загружает данные из TSP файла в pandas DataFrame.
-    """
+def read_tsp_with_pandas():
+    # Commands to choose file
+    root = tk.Tk()
+    root.withdraw()  # Hide window
+    file_path = filedialog.askopenfilename(
+        title="Выберите TSP файл",
+        filetypes=[("TSP Files", "*.tsp"), ("All Files", "*.*")]
+    )
+    
+    if not file_path:
+        raise ValueError("No file")
+    
+    # Getting data from file
     problem = tslib.load(file_path)
     if problem.node_coords:
         coordinates = pd.DataFrame(
@@ -19,11 +29,8 @@ def read_tsp_with_pandas(file_path="E:\\xd\\docs\\berlin52.tsp"):
         coordinates = pd.DataFrame(columns=["NodeID", "X", "Y"])
     return coordinates
 
-# 2. Предварительная матрица расстояний
+# Matrix to make it faster
 def precompute_distance_matrix(coordinates):
-    """
-    Создаёт матрицу расстояний для ускорения вычислений.
-    """
     num_cities = len(coordinates)
     distance_matrix = np.zeros((num_cities, num_cities))
     for i, (_, x1, y1) in coordinates.iterrows():
@@ -31,11 +38,11 @@ def precompute_distance_matrix(coordinates):
             distance_matrix[i, j] = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
     return distance_matrix
 
-# 3. Вычисление расстояния из матрицы
+# Distance from the matrix
 def calculate_distance(node1, node2, distance_matrix):
     return distance_matrix[node1 - 1, node2 - 1]
 
-# 4. Функция расчёта фитнеса
+# "Fitness" calculation
 def calculate_fitness(solution, coordinates, distance_matrix):
     total_distance = 0
     for i in range(len(solution) - 1):
@@ -43,12 +50,12 @@ def calculate_fitness(solution, coordinates, distance_matrix):
     total_distance += calculate_distance(solution[-1], solution[0], distance_matrix)
     return total_distance
 
-# 5. Вывод информации о решении
+# Info show
 def print_solution_info(solution, fitness):
     print("Solution:", " -> ".join(map(str, solution)))
     print(f"Fitness (Total Distance): {fitness:.2f}")
 
-# 6. Жадный алгоритм с матрицей расстояний
+# Greedy algorithm
 def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
     unvisited = set(coordinates["NodeID"].tolist())
     current_node = start_node
@@ -66,13 +73,13 @@ def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
 
     return solution
 
-# 7. Генерация случайных решений
+# Random solutions
 def create_random_solution(coordinates):
     city_ids = coordinates["NodeID"].tolist()
     random.shuffle(city_ids)
     return city_ids
 
-# 8. Генерация новой эпохи
+# New epochs
 def create_new_epoch_roulette(previous_population, coordinates, distance_matrix, population_size, mutation_prob=0.1):
     fitness_values = [calculate_fitness(ind, coordinates, distance_matrix) for ind in previous_population]
     new_population = []
@@ -80,17 +87,17 @@ def create_new_epoch_roulette(previous_population, coordinates, distance_matrix,
     best_solution = None
 
     while len(new_population) < population_size:
-        # Селекция: рулетка
+        #Roulette
         parent1 = roulette_wheel_selection(previous_population, fitness_values)
         parent2 = roulette_wheel_selection(previous_population, fitness_values)
         
-        # Кроссовер
+        # Crossover
         child = ordered_crossover(parent1, parent2)
         
-        # Мутация
+        # Mutation
         child = swap_mutation(child, mutation_prob)
         
-        # Фитнес
+        # "Fitness"
         fitness = calculate_fitness(child, coordinates, distance_matrix)
         if fitness < best_fitness:
             best_fitness = fitness
@@ -100,7 +107,7 @@ def create_new_epoch_roulette(previous_population, coordinates, distance_matrix,
     
     return new_population, best_solution, best_fitness
 
-# 9. Генетический алгоритм
+# 9. Genetic algorithm
 def run_genetic_algorithm_roulette(coordinates, population_size=50, num_epochs=100, mutation_prob=0.1):
     distance_matrix = precompute_distance_matrix(coordinates)
     population = [create_random_solution(coordinates) for _ in range(population_size)]
@@ -130,7 +137,7 @@ def run_genetic_algorithm_roulette(coordinates, population_size=50, num_epochs=1
     plt.show()
     
     return best_solution, best_overall_fitness
-# Функция рулетки
+# Roulette function
 def roulette_wheel_selection(population, fitness_values):
     """
     Выбирает решение из популяции на основе рулетки (вероятность пропорциональна обратному фитнесу).
@@ -143,9 +150,9 @@ def roulette_wheel_selection(population, fitness_values):
         current += 1.0 / fitness
         if current >= pick:
             return individual
-    return population[-1]  # В случае ошибки возврат последнего элемента
+    return population[-1] 
 
-# 10. Сравнение случайных и жадных решений
+# 10. Comparison of greedy and random
 
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
 
@@ -169,31 +176,22 @@ def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions
     plt.show()
 
 def swap_mutation(solution, mutation_prob=0.1):
-    """
-    Мутация решения путем обмена двух случайных городов с заданной вероятностью.
-    """
     mutated = solution.copy()
     for i in range(len(mutated)):
         if random.random() < mutation_prob:
             j = random.randint(0, len(mutated) - 1)
-            # Обмен местами
+            #Switching places
             mutated[i], mutated[j] = mutated[j], mutated[i]
     return mutated
 
 def ordered_crossover(parent1, parent2):
-    """
-    Упорядоченный кроссовер (Ordered Crossover - OX).
-    """
     size = len(parent1)
     child = [-1] * size
     
-    # Выбираем случайный сегмент
+    # Random segment
     start, end = sorted(random.sample(range(size), 2))
-    
-    # Копируем сегмент из первого родителя
     child[start:end] = parent1[start:end]
     
-    # Заполняем оставшиеся позиции из второго родителя
     remaining = [x for x in parent2 if x not in child[start:end]]
     j = 0
     for i in range(size):
@@ -203,7 +201,6 @@ def ordered_crossover(parent1, parent2):
     
     return child
 
-# Основной запуск
 if __name__ == "__main__":
     coordinates = read_tsp_with_pandas()
     distance_matrix = precompute_distance_matrix(coordinates)
@@ -212,3 +209,4 @@ if __name__ == "__main__":
     best_solution, best_fitness = run_genetic_algorithm_roulette(coordinates)
     print("\nBest Solution from Genetic Algorithm:")
     print_solution_info(best_solution, best_fitness)
+

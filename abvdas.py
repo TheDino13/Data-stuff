@@ -139,9 +139,6 @@ def run_genetic_algorithm_roulette(coordinates, population_size=50, num_epochs=1
     return best_solution, best_overall_fitness
 # Roulette function
 def roulette_wheel_selection(population, fitness_values):
-    """
-    Выбирает решение из популяции на основе рулетки (вероятность пропорциональна обратному фитнесу).
-    """
     total_fitness = sum(1.0 / f for f in fitness_values)
     pick = random.uniform(0, total_fitness)
     current = 0

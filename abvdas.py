@@ -150,7 +150,6 @@ def roulette_wheel_selection(population, fitness_values):
     return population[-1] 
 
 # 10. Comparison of greedy and random
-
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
 
     start_node = 1
@@ -202,8 +201,8 @@ if __name__ == "__main__":
     coordinates = read_tsp_with_pandas()
     distance_matrix = precompute_distance_matrix(coordinates)
     compare_greedy_and_random(coordinates, distance_matrix)
-    print("\nRunning Genetic Algorithm...")
+    print("\nGenetic Algorithm...")
     best_solution, best_fitness = run_genetic_algorithm_roulette(coordinates)
-    print("\nBest Solution from Genetic Algorithm:")
+    print("\nBest Solution:")
     print_solution_info(best_solution, best_fitness)
-
+    

@@ -150,6 +150,7 @@ def roulette_wheel_selection(population, fitness_values):
     return population[-1] 
 
 # 10. Comparison of greedy and random
+
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
 
     start_node = 1

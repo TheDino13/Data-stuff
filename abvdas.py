@@ -202,8 +202,8 @@ if __name__ == "__main__":
     coordinates = read_tsp_with_pandas()
     distance_matrix = precompute_distance_matrix(coordinates)
     compare_greedy_and_random(coordinates, distance_matrix)
-    print("\nGenetic Algorithm...")
+    print("\nRunning Genetic Algorithm...")
     best_solution, best_fitness = run_genetic_algorithm_roulette(coordinates)
-    print("\nBest Solution:")
+    print("\nBest Solution from Genetic Algorithm:")
     print_solution_info(best_solution, best_fitness)
     

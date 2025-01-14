@@ -11,7 +11,7 @@ def read_tsp_with_pandas():
     root = tk.Tk()
     root.withdraw()  # Hide window
     file_path = filedialog.askopenfilename(
-        title="Выберите TSP файл",
+        title="Choose the file",
         filetypes=[("TSP Files", "*.tsp"), ("All Files", "*.*")]
     )
     

@@ -200,7 +200,6 @@ if __name__ == "__main__":
     print("\nBest Solution Found:")
     print_solution_info(best_solution, best_fitness)
     
-    
     # Compare with greedy solution
     distance_matrix = precompute_distance_matrix(coordinates)
     greedy_solution = greedy_algorithm_with_matrix(1, coordinates, distance_matrix)

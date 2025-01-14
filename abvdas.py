@@ -1,3 +1,4 @@
+
 import tsplib95 as tslib
 import pandas as pd
 import random
@@ -6,8 +7,15 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import filedialog
 
+# ----------------
+# Data Loading and Preprocessing
+# ----------------
+
 def read_tsp_with_pandas():
-    # Commands to choose file
+    """
+    Opens a file dialog to select and read a TSP problem file.
+    Returns a DataFrame with node coordinates.
+    """
     root = tk.Tk()
     root.withdraw()  # Hide window
     file_path = filedialog.askopenfilename(
@@ -18,7 +26,6 @@ def read_tsp_with_pandas():
     if not file_path:
         raise ValueError("No file")
     
-    # Getting data from file
     problem = tslib.load(file_path)
     if problem.node_coords:
         coordinates = pd.DataFrame(
@@ -29,8 +36,10 @@ def read_tsp_with_pandas():
         coordinates = pd.DataFrame(columns=["NodeID", "X", "Y"])
     return coordinates
 
-# Matrix to make it faster
 def precompute_distance_matrix(coordinates):
+    """
+    Creates a distance matrix for faster distance calculations.
+    """
     num_cities = len(coordinates)
     distance_matrix = np.zeros((num_cities, num_cities))
     for i, (_, x1, y1) in coordinates.iterrows():
@@ -38,25 +47,38 @@ def precompute_distance_matrix(coordinates):
             distance_matrix[i, j] = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
     return distance_matrix
 
-# Distance from the matrix
 def calculate_distance(node1, node2, distance_matrix):
+    """
+    Calculates distance between two nodes using the precomputed distance matrix.
+    """
     return distance_matrix[node1 - 1, node2 - 1]
 
-# "Fitness" calculation
 def calculate_fitness(solution, coordinates, distance_matrix):
+    """
+    Calculates total distance (fitness) of a route.
+    """
     total_distance = 0
     for i in range(len(solution) - 1):
         total_distance += calculate_distance(solution[i], solution[i+1], distance_matrix)
     total_distance += calculate_distance(solution[-1], solution[0], distance_matrix)
     return total_distance
 
-# Info show
-def print_solution_info(solution, fitness):
-    print("Solution:", " -> ".join(map(str, solution)))
-    print(f"Fitness (Total Distance): {fitness:.2f}")
+# ----------------
+# Basic Solution Generators
+# ----------------
 
-# Greedy algorithm
+def create_random_solution(coordinates):
+    """
+    Creates a random route visiting all cities.
+    """
+    city_ids = coordinates["NodeID"].tolist()
+    random.shuffle(city_ids)
+    return city_ids
+
 def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
+    """
+    Implements a greedy nearest-neighbor algorithm for TSP.
+    """
     unvisited = set(coordinates["NodeID"].tolist())
     current_node = start_node
     solution = [current_node]
@@ -73,34 +95,59 @@ def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
 
     return solution
 
-# Random solutions
-def create_random_solution(coordinates):
-    city_ids = coordinates["NodeID"].tolist()
-    random.shuffle(city_ids)
-    return city_ids
+# ----------------
+# Genetic Algorithm Components
+# ----------------
+
+def swap_mutation(solution, mutation_prob=0.1):
+    """
+    Performs mutation by swapping random cities in the route.
+    """
+    mutated = solution.copy()
+    for i in range(len(mutated)):
+        if random.random() < mutation_prob:
+            j = random.randint(0, len(mutated) - 1)
+            mutated[i], mutated[j] = mutated[j], mutated[i]
+    return mutated
+
+def ordered_crossover(parent1, parent2):
+    """
+    Performs ordered crossover between two parent solutions.
+    """
+    size = len(parent1)
+    child = [-1] * size
+    
+    start, end = sorted(random.sample(range(size), 2))
+    child[start:end] = parent1[start:end]
+    
+    remaining = [x for x in parent2 if x not in child[start:end]]
+    j = 0
+    for i in range(size):
+        if child[i] == -1:
+            child[i] = remaining[j]
+            j += 1
+    
+    return child
 
 def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05):
+    """
+    Main genetic algorithm implementation with tournament selection and elitism.
+    """
     distance_matrix = precompute_distance_matrix(coordinates)
-    # Increase initial population size and add elitism
     population = [create_random_solution(coordinates) for _ in range(population_size)]
     best_fitnesses, avg_fitnesses = [], []
 
     best_solution = min(population, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
     best_overall_fitness = calculate_fitness(best_solution, coordinates, distance_matrix)
     
-    # Add elitism - keep best 10% of solutions
     elite_size = population_size // 10
     
     for epoch in range(num_epochs):
-        # Sort population by fitness
         population.sort(key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
         elite = population[:elite_size]
-        
-        # Create new population with elitism
         new_population = elite.copy()
         
         while len(new_population) < population_size:
-            # Tournament selection instead of roulette
             tournament_size = 5
             tournament = random.sample(population, tournament_size)
             parent1 = min(tournament, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
@@ -113,7 +160,6 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
         
         population = new_population
         
-        # Update best solution
         epoch_best = min(population, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
         epoch_fitness = calculate_fitness(epoch_best, coordinates, distance_matrix)
         
@@ -125,10 +171,9 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
         avg_fitnesses.append(np.mean([calculate_fitness(sol, coordinates, distance_matrix) 
                                     for sol in population]))
 
-        if epoch % 50 == 0:  # Print less frequently
+        if epoch % 50 == 0:
             print(f"Epoch {epoch}: Best Fitness = {best_overall_fitness:.2f}")
     
-    # Improved visualization
     plt.figure(figsize=(12, 6))
     plt.plot(best_fitnesses, label='Best Fitness', color='blue', linewidth=2)
     plt.plot(avg_fitnesses, label='Average Fitness', color='orange', alpha=0.7)
@@ -141,8 +186,21 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
     
     return best_solution, best_overall_fitness
 
-# Comparison of greedy and random
+# ----------------
+# Analysis and Comparison Functions
+# ----------------
+
+def print_solution_info(solution, fitness):
+    """
+    Prints formatted information about a solution.
+    """
+    print("Solution:", " -> ".join(map(str, solution)))
+    print(f"Fitness (Total Distance): {fitness:.2f}")
+
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
+    """
+    Compares performance of greedy and random solutions.
+    """
     start_node = 1
     greedy_solution = greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix)
     greedy_fitness = calculate_fitness(greedy_solution, coordinates, distance_matrix)
@@ -162,43 +220,57 @@ def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions
     plt.legend()
     plt.show()
 
-def swap_mutation(solution, mutation_prob=0.1):
-    mutated = solution.copy()
-    for i in range(len(mutated)):
-        if random.random() < mutation_prob:
-            j = random.randint(0, len(mutated) - 1)
-            #Switching places
-            mutated[i], mutated[j] = mutated[j], mutated[i]
-    return mutated
+def compare_mutation_rates_simple(coordinates, mutation_rates=[0.01, 0.5]):
+    """
+    Compares effectiveness of different mutation rates.
+    """
+    plt.figure(figsize=(10, 6))
+    results = {}
+    
+    for rate in mutation_rates:
+        print(f"\nTesting mutation rate: {rate}")
+        best_solution, fitness = run_genetic_algorithm_roulette(
+            coordinates,
+            population_size=100,
+            num_epochs=1000,
+            mutation_prob=rate
+        )
+        results[rate] = fitness
+    
+    plt.bar(results.keys(), results.values(), color=['skyblue', 'lightgreen'])
+    plt.title('Mutation Rates Comparison')
+    plt.xlabel('Mutation Rate')
+    plt.ylabel('Best Fitness (Distance)')
+    
+    for i, v in results.items():
+        plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
+    
+    plt.show()
+    
+    best_rate = min(results.items(), key=lambda x: x[1])
+    print(f"\nBest mutation rate: {best_rate[0]} (fitness: {best_rate[1]:.2f})")
 
-def ordered_crossover(parent1, parent2):
-    size = len(parent1)
-    child = [-1] * size
-    
-    # Random segment
-    start, end = sorted(random.sample(range(size), 2))
-    child[start:end] = parent1[start:end]
-    
-    remaining = [x for x in parent2 if x not in child[start:end]]
-    j = 0
-    for i in range(size):
-        if child[i] == -1:
-            child[i] = remaining[j]
-            j += 1
-    
-    return child
+# ----------------
+# Main Execution
+# ----------------
 
 if __name__ == "__main__":
+    # Load data
     coordinates = read_tsp_with_pandas()
+    
+    # Run genetic algorithm
     print("\nRunning Genetic Algorithm with Enhanced Parameters...")
     best_solution, best_fitness = run_genetic_algorithm_roulette(
         coordinates,
-        population_size=100,  # Increased population size
-        num_epochs=1000,      # Increased epochs
-        mutation_prob=0.05    # Adjusted mutation rate
+        population_size=100,
+        num_epochs=1000,
+        mutation_prob=0.05
     )
     print("\nBest Solution Found:")
     print_solution_info(best_solution, best_fitness)
+    
+    # Compare mutation rates
+    compare_mutation_rates_simple(coordinates)
     
     # Compare with greedy solution
     distance_matrix = precompute_distance_matrix(coordinates)

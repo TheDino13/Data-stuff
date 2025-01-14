@@ -79,79 +79,70 @@ def create_random_solution(coordinates):
     random.shuffle(city_ids)
     return city_ids
 
-# New epochs
-def create_new_epoch_roulette(previous_population, coordinates, distance_matrix, population_size, mutation_prob=0.1):
-    fitness_values = [calculate_fitness(ind, coordinates, distance_matrix) for ind in previous_population]
-    new_population = []
-    best_fitness = float('inf')
-    best_solution = None
-
-    while len(new_population) < population_size:
-        #Roulette
-        parent1 = roulette_wheel_selection(previous_population, fitness_values)
-        parent2 = roulette_wheel_selection(previous_population, fitness_values)
-        
-        # Crossover
-        child = ordered_crossover(parent1, parent2)
-        
-        # Mutation
-        child = swap_mutation(child, mutation_prob)
-        
-        # "Fitness"
-        fitness = calculate_fitness(child, coordinates, distance_matrix)
-        if fitness < best_fitness:
-            best_fitness = fitness
-            best_solution = child
-            
-        new_population.append(child)
-    
-    return new_population, best_solution, best_fitness
-
-# 9. Genetic algorithm
-def run_genetic_algorithm_roulette(coordinates, population_size=50, num_epochs=100, mutation_prob=0.1):
+def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05):
     distance_matrix = precompute_distance_matrix(coordinates)
+    # Increase initial population size and add elitism
     population = [create_random_solution(coordinates) for _ in range(population_size)]
     best_fitnesses, avg_fitnesses = [], []
 
     best_solution = min(population, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
     best_overall_fitness = calculate_fitness(best_solution, coordinates, distance_matrix)
     
+    # Add elitism - keep best 10% of solutions
+    elite_size = population_size // 10
+    
     for epoch in range(num_epochs):
-        population, epoch_best, epoch_fitness = create_new_epoch_roulette(
-            population, coordinates, distance_matrix, population_size, mutation_prob
-        )
+        # Sort population by fitness
+        population.sort(key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
+        elite = population[:elite_size]
+        
+        # Create new population with elitism
+        new_population = elite.copy()
+        
+        while len(new_population) < population_size:
+            # Tournament selection instead of roulette
+            tournament_size = 5
+            tournament = random.sample(population, tournament_size)
+            parent1 = min(tournament, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
+            tournament = random.sample(population, tournament_size)
+            parent2 = min(tournament, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
+            
+            child = ordered_crossover(parent1, parent2)
+            child = swap_mutation(child, mutation_prob)
+            new_population.append(child)
+        
+        population = new_population
+        
+        # Update best solution
+        epoch_best = min(population, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
+        epoch_fitness = calculate_fitness(epoch_best, coordinates, distance_matrix)
+        
         if epoch_fitness < best_overall_fitness:
             best_overall_fitness = epoch_fitness
             best_solution = epoch_best
         
         best_fitnesses.append(best_overall_fitness)
-        avg_fitness = np.mean([calculate_fitness(sol, coordinates, distance_matrix) for sol in population])
-        avg_fitnesses.append(avg_fitness)
+        avg_fitnesses.append(np.mean([calculate_fitness(sol, coordinates, distance_matrix) 
+                                    for sol in population]))
 
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:  # Print less frequently
             print(f"Epoch {epoch}: Best Fitness = {best_overall_fitness:.2f}")
     
-    plt.plot(best_fitnesses, label='Best Fitness')
-    plt.plot(avg_fitnesses, label='Average Fitness')
+    # Improved visualization
+    plt.figure(figsize=(12, 6))
+    plt.plot(best_fitnesses, label='Best Fitness', color='blue', linewidth=2)
+    plt.plot(avg_fitnesses, label='Average Fitness', color='orange', alpha=0.7)
+    plt.title('Genetic Algorithm Performance Over Time')
+    plt.xlabel('Epoch')
+    plt.ylabel('Fitness (Total Distance)')
     plt.legend()
+    plt.grid(True, alpha=0.3)
     plt.show()
     
     return best_solution, best_overall_fitness
-# Roulette function
-def roulette_wheel_selection(population, fitness_values):
-    total_fitness = sum(1.0 / f for f in fitness_values)
-    pick = random.uniform(0, total_fitness)
-    current = 0
-    
-    for individual, fitness in zip(population, fitness_values):
-        current += 1.0 / fitness
-        if current >= pick:
-            return individual
-    return population[-1] 
 
-# 10. Comparison of greedy and random
+# Comparison of greedy and random
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
-
     start_node = 1
     greedy_solution = greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix)
     greedy_fitness = calculate_fitness(greedy_solution, coordinates, distance_matrix)
@@ -199,10 +190,20 @@ def ordered_crossover(parent1, parent2):
 
 if __name__ == "__main__":
     coordinates = read_tsp_with_pandas()
-    distance_matrix = precompute_distance_matrix(coordinates)
-    compare_greedy_and_random(coordinates, distance_matrix)
-    print("\nGenetic Algorithm...")
-    best_solution, best_fitness = run_genetic_algorithm_roulette(coordinates)
-    print("\nBest Solution:")
+    print("\nRunning Genetic Algorithm with Enhanced Parameters...")
+    best_solution, best_fitness = run_genetic_algorithm_roulette(
+        coordinates,
+        population_size=100,  # Increased population size
+        num_epochs=1000,      # Increased epochs
+        mutation_prob=0.05    # Adjusted mutation rate
+    )
+    print("\nBest Solution Found:")
     print_solution_info(best_solution, best_fitness)
     
+    # Compare with greedy solution
+    distance_matrix = precompute_distance_matrix(coordinates)
+    greedy_solution = greedy_algorithm_with_matrix(1, coordinates, distance_matrix)
+    greedy_fitness = calculate_fitness(greedy_solution, coordinates, distance_matrix)
+    print("\nGreedy Solution for Comparison:")
+    print_solution_info(greedy_solution, greedy_fitness)
+    print(f"\nImprovement over greedy: {((greedy_fitness - best_fitness) / greedy_fitness) * 100:.2f}%")

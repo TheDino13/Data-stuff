@@ -1,4 +1,3 @@
-
 import tsplib95 as tslib
 import pandas as pd
 import random
@@ -12,10 +11,8 @@ from tkinter import filedialog
 # ----------------
 
 def read_tsp_with_pandas():
-    """
-    Opens a file dialog to select and read a TSP problem file.
-    Returns a DataFrame with node coordinates.
-    """
+    # Opens a file dialog to select and read a TSP problem file.
+    # Returns a DataFrame with node coordinates.
     root = tk.Tk()
     root.withdraw()  # Hide window
     file_path = filedialog.askopenfilename(
@@ -37,9 +34,7 @@ def read_tsp_with_pandas():
     return coordinates
 
 def precompute_distance_matrix(coordinates):
-    """
-    Creates a distance matrix for faster distance calculations.
-    """
+    # Creates a distance matrix for faster distance calculations.
     num_cities = len(coordinates)
     distance_matrix = np.zeros((num_cities, num_cities))
     for i, (_, x1, y1) in coordinates.iterrows():
@@ -48,15 +43,11 @@ def precompute_distance_matrix(coordinates):
     return distance_matrix
 
 def calculate_distance(node1, node2, distance_matrix):
-    """
-    Calculates distance between two nodes using the precomputed distance matrix.
-    """
+    # Calculates distance between two nodes using the precomputed distance matrix.
     return distance_matrix[node1 - 1, node2 - 1]
 
 def calculate_fitness(solution, coordinates, distance_matrix):
-    """
-    Calculates total distance (fitness) of a route.
-    """
+    # Calculates total distance (fitness) of a route.
     total_distance = 0
     for i in range(len(solution) - 1):
         total_distance += calculate_distance(solution[i], solution[i+1], distance_matrix)
@@ -68,17 +59,13 @@ def calculate_fitness(solution, coordinates, distance_matrix):
 # ----------------
 
 def create_random_solution(coordinates):
-    """
-    Creates a random route visiting all cities.
-    """
+    # Creates a random route visiting all cities.
     city_ids = coordinates["NodeID"].tolist()
     random.shuffle(city_ids)
     return city_ids
 
 def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
-    """
-    Implements a greedy nearest-neighbor algorithm for TSP.
-    """
+    # Implements a greedy nearest-neighbor algorithm for TSP.
     unvisited = set(coordinates["NodeID"].tolist())
     current_node = start_node
     solution = [current_node]
@@ -100,9 +87,7 @@ def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
 # ----------------
 
 def swap_mutation(solution, mutation_prob=0.1):
-    """
-    Performs mutation by swapping random cities in the route.
-    """
+    # Performs mutation by swapping random cities in the route.
     mutated = solution.copy()
     for i in range(len(mutated)):
         if random.random() < mutation_prob:
@@ -111,9 +96,7 @@ def swap_mutation(solution, mutation_prob=0.1):
     return mutated
 
 def ordered_crossover(parent1, parent2):
-    """
-    Performs ordered crossover between two parent solutions.
-    """
+    # Performs ordered crossover between two parent solutions.
     size = len(parent1)
     child = [-1] * size
     
@@ -130,9 +113,7 @@ def ordered_crossover(parent1, parent2):
     return child
 
 def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05):
-    """
-    Main genetic algorithm implementation with tournament selection and elitism.
-    """
+    # Main genetic algorithm implementation with tournament selection and elitism.
     distance_matrix = precompute_distance_matrix(coordinates)
     population = [create_random_solution(coordinates) for _ in range(population_size)]
     best_fitnesses, avg_fitnesses = [], []
@@ -191,16 +172,12 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
 # ----------------
 
 def print_solution_info(solution, fitness):
-    """
-    Prints formatted information about a solution.
-    """
+    # Prints formatted information about a solution.
     print("Solution:", " -> ".join(map(str, solution)))
     print(f"Fitness (Total Distance): {fitness:.2f}")
 
 def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions=100):
-    """
-    Compares performance of greedy and random solutions.
-    """
+    # Compares performance of greedy and random solutions.
     start_node = 1
     greedy_solution = greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix)
     greedy_fitness = calculate_fitness(greedy_solution, coordinates, distance_matrix)
@@ -221,9 +198,7 @@ def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions
     plt.show()
 
 def compare_mutation_rates_simple(coordinates, mutation_rates=[0.01, 0.5]):
-    """
-    Compares effectiveness of different mutation rates.
-    """
+    # Compares effectiveness of different mutation rates.
     plt.figure(figsize=(10, 6))
     results = {}
     
@@ -249,10 +224,6 @@ def compare_mutation_rates_simple(coordinates, mutation_rates=[0.01, 0.5]):
     
     best_rate = min(results.items(), key=lambda x: x[1])
     print(f"\nBest mutation rate: {best_rate[0]} (fitness: {best_rate[1]:.2f})")
-
-# ----------------
-# Main Execution
-# ----------------
 
 if __name__ == "__main__":
     # Load data

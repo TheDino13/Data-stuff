@@ -111,6 +111,10 @@ def ordered_crossover(parent1, parent2):
             j += 1
     
     return child
+'''
+lambda is the key to use function only ONCE and fast without wasting time
+2f for the number with 2 numbers after dot
+'''
 
 def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05):
     # Main genetic algorithm implementation with tournament selection and elitism.

@@ -63,7 +63,27 @@ def create_random_solution(coordinates):
     city_ids = coordinates["NodeID"].tolist()
     random.shuffle(city_ids)
     return city_ids
+def run_random_solutions(coordinates, num_runs=1000):
+    distance_matrix = precompute_distance_matrix(coordinates)
+    fitnesses = []  # storage list
 
+    for _ in range(num_runs):
+        random_solution = create_random_solution(coordinates)
+        fitness = calculate_fitness(random_solution, coordinates, distance_matrix)
+        fitnesses.append(fitness)
+
+    best_fitness = min(fitnesses)
+    avg_fitness = np.mean(fitnesses)
+    std_fitness = np.std(fitnesses)
+    variance_fitness = np.var(fitnesses)
+
+    print(f"\nRandom Solutions (1000 runs):")
+    print(f"Best Fitness: {best_fitness:.2f}")
+    print(f"Average Fitness: {avg_fitness:.2f}")
+    print(f"Standard Deviation: {std_fitness:.2f}")
+    print(f"Variance: {variance_fitness:.2f}")
+
+    return best_fitness, avg_fitness, std_fitness, variance_fitness
 def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
     # Implements a greedy nearest-neighbor algorithm for TSP.
     unvisited = set(coordinates["NodeID"].tolist())
@@ -111,12 +131,31 @@ def ordered_crossover(parent1, parent2):
             j += 1
     
     return child
+def plot_solution(coordinates, solution, title="Best Solution"):
+
+    x = [coordinates.loc[coordinates["NodeID"] == node, "X"].values[0] for node in solution]
+    y = [coordinates.loc[coordinates["NodeID"] == node, "Y"].values[0] for node in solution]
+
+    x.append(x[0])
+    y.append(y[0])
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y, marker='o', linestyle='-', color='b', label="Route")
+    plt.scatter(x, y, color='red')  # coordinates of cities
+    for i, node in enumerate(solution):
+        plt.text(x[i], y[i], f"{node}", fontsize=12, ha='right')
+
+    plt.title(title)
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
 '''
 lambda is the key to use function only ONCE and fast without wasting time
 2f for the number with 2 numbers after dot
 '''
 
-def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05):
+def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05, verbose=False):
     # Main genetic algorithm implementation with tournament selection and elitism.
     distance_matrix = precompute_distance_matrix(coordinates)
     population = [create_random_solution(coordinates) for _ in range(population_size)]
@@ -155,10 +194,8 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
         best_fitnesses.append(best_overall_fitness)
         avg_fitnesses.append(np.mean([calculate_fitness(sol, coordinates, distance_matrix) 
                                     for sol in population]))
-
-        if epoch % 50 == 0:
+        if verbose and epoch % 50 == 0:
             print(f"Epoch {epoch}: Best Fitness = {best_overall_fitness:.2f}")
-    
     plt.figure(figsize=(12, 6))
     plt.plot(best_fitnesses, label='Best Fitness', color='blue', linewidth=2)
     plt.plot(avg_fitnesses, label='Average Fitness', color='orange', alpha=0.7)
@@ -168,6 +205,9 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.show()
+    
+    if len(coordinates) == 11:
+        plot_solution(coordinates, best_solution, title="Best Solution for 11 Cities")
     
     return best_solution, best_overall_fitness
 
@@ -201,11 +241,16 @@ def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions
     plt.legend()
     plt.show()
 
-def compare_mutation_rates_simple(coordinates, mutation_rates=[0.01, 0.5]):
-    # Compares effectiveness of different mutation rates.
+
+
+def compare_mutation_rates_simple(coordinates, test_mutation_rates=False):
+    if not test_mutation_rates:
+        return  # if tests not needed skip
+
     plt.figure(figsize=(10, 6))
     results = {}
-    
+    mutation_rates = [0.01, 0.5]
+
     for rate in mutation_rates:
         print(f"\nTesting mutation rate: {rate}")
         best_solution, fitness = run_genetic_algorithm_roulette(
@@ -215,17 +260,17 @@ def compare_mutation_rates_simple(coordinates, mutation_rates=[0.01, 0.5]):
             mutation_prob=rate
         )
         results[rate] = fitness
-    
+
     plt.bar(results.keys(), results.values(), color=['skyblue', 'lightgreen'])
     plt.title('Mutation Rates Comparison')
     plt.xlabel('Mutation Rate')
     plt.ylabel('Best Fitness (Distance)')
-    
+
     for i, v in results.items():
         plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
-    
+
     plt.show()
-    
+
     best_rate = min(results.items(), key=lambda x: x[1])
     print(f"\nBest mutation rate: {best_rate[0]} (fitness: {best_rate[1]:.2f})")
 
@@ -239,14 +284,16 @@ if __name__ == "__main__":
         coordinates,
         population_size=100,
         num_epochs=1000,
-        mutation_prob=0.05
+        mutation_prob=0.05,
+        verbose=False
     )
     print("\nBest Solution Found:")
     print_solution_info(best_solution, best_fitness)
-    
+    run_random_solutions(coordinates, num_runs=1000)
     # Compare mutation rates
     compare_mutation_rates_simple(coordinates)
-    
+    test_mutation = input("Test mutation rates 0.5 and 0.1? (y/n): ").strip().lower()
+    compare_mutation_rates_simple(coordinates, test_mutation == 'y')
     # Compare with greedy solution
     distance_matrix = precompute_distance_matrix(coordinates)
     greedy_solution = greedy_algorithm_with_matrix(1, coordinates, distance_matrix)

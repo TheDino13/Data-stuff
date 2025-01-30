@@ -366,7 +366,7 @@ if __name__ == "__main__":
     
     # Run genetic algorithm
     print("\nRunning Genetic Algorithm with Enhanced Parameters...")
-    best_solution, best_fitness = run_genetic_algorithm_roulette(
+    best_solution, best_fitness, best_fitnesses, avg_fitnesses = run_genetic_algorithm_roulette(
         coordinates,
         population_size=100,
         num_epochs=1000,

@@ -63,7 +63,9 @@ def create_random_solution(coordinates):
     city_ids = coordinates["NodeID"].tolist()
     random.shuffle(city_ids)
     return city_ids
+
 def run_random_solutions(coordinates, num_runs=1000):
+    # Runs random solutions and calculates statistics.
     distance_matrix = precompute_distance_matrix(coordinates)
     fitnesses = []  # storage list
 
@@ -84,6 +86,7 @@ def run_random_solutions(coordinates, num_runs=1000):
     print(f"Variance: {variance_fitness:.2f}")
 
     return best_fitness, avg_fitness, std_fitness, variance_fitness
+
 def greedy_algorithm_with_matrix(start_node, coordinates, distance_matrix):
     # Implements a greedy nearest-neighbor algorithm for TSP.
     unvisited = set(coordinates["NodeID"].tolist())
@@ -131,8 +134,9 @@ def ordered_crossover(parent1, parent2):
             j += 1
     
     return child
-def plot_solution(coordinates, solution, title="Best Solution"):
 
+def plot_solution(coordinates, solution, title="Best Solution"):
+    # Plots the best solution found.
     x = [coordinates.loc[coordinates["NodeID"] == node, "X"].values[0] for node in solution]
     y = [coordinates.loc[coordinates["NodeID"] == node, "Y"].values[0] for node in solution]
 
@@ -155,7 +159,7 @@ lambda is the key to use function only ONCE and fast without wasting time
 2f for the number with 2 numbers after dot
 '''
 
-def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05, verbose=False):
+def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=1000, mutation_prob=0.05, tournament_size=5, verbose=False):
     # Main genetic algorithm implementation with tournament selection and elitism.
     distance_matrix = precompute_distance_matrix(coordinates)
     population = [create_random_solution(coordinates) for _ in range(population_size)]
@@ -172,7 +176,6 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
         new_population = elite.copy()
         
         while len(new_population) < population_size:
-            tournament_size = 5
             tournament = random.sample(population, tournament_size)
             parent1 = min(tournament, key=lambda x: calculate_fitness(x, coordinates, distance_matrix))
             tournament = random.sample(population, tournament_size)
@@ -196,6 +199,7 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
                                     for sol in population]))
         if verbose and epoch % 50 == 0:
             print(f"Epoch {epoch}: Best Fitness = {best_overall_fitness:.2f}")
+    
     plt.figure(figsize=(12, 6))
     plt.plot(best_fitnesses, label='Best Fitness', color='blue', linewidth=2)
     plt.plot(avg_fitnesses, label='Average Fitness', color='orange', alpha=0.7)
@@ -209,7 +213,7 @@ def run_genetic_algorithm_roulette(coordinates, population_size=100, num_epochs=
     if len(coordinates) == 11:
         plot_solution(coordinates, best_solution, title="Best Solution for 11 Cities")
     
-    return best_solution, best_overall_fitness
+    return best_solution, best_overall_fitness, best_fitnesses, avg_fitnesses
 
 # ----------------
 # Analysis and Comparison Functions
@@ -241,9 +245,8 @@ def compare_greedy_and_random(coordinates, distance_matrix, num_random_solutions
     plt.legend()
     plt.show()
 
-
-
 def compare_mutation_rates_simple(coordinates, test_mutation_rates=False):
+    # Compares different mutation rates.
     if not test_mutation_rates:
         return  # if tests not needed skip
 
@@ -274,6 +277,89 @@ def compare_mutation_rates_simple(coordinates, test_mutation_rates=False):
     best_rate = min(results.items(), key=lambda x: x[1])
     print(f"\nBest mutation rate: {best_rate[0]} (fitness: {best_rate[1]:.2f})")
 
+# ----------------
+# New Comparison Functions
+# ----------------
+
+def compare_mutation_rates(coordinates):
+    # Compares different mutation rates.
+    mutation_rates = [0.1, 0.5, 0.05]
+    results = {}
+
+    for rate in mutation_rates:
+        print(f"\nTesting mutation rate: {rate}")
+        best_solution, best_fitness, best_fitnesses, avg_fitnesses = run_genetic_algorithm_roulette(
+            coordinates,
+            population_size=100,
+            num_epochs=1000,
+            mutation_prob=rate
+        )
+        results[rate] = (best_fitnesses, avg_fitnesses)
+
+    plt.figure(figsize=(12, 6))
+    for rate, (best_fitnesses, avg_fitnesses) in results.items():
+        plt.plot(best_fitnesses, label=f'Mutation Rate {rate}')
+
+    plt.title('Comparison of Mutation Rates')
+    plt.xlabel('Epoch')
+    plt.ylabel('Best Fitness (Distance)')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
+
+def compare_population_sizes(coordinates):
+    # Compares different population sizes.
+    population_sizes = [50, 100, 200]
+    results = {}
+
+    for size in population_sizes:
+        print(f"\nTesting population size: {size}")
+        best_solution, best_fitness, best_fitnesses, avg_fitnesses = run_genetic_algorithm_roulette(
+            coordinates,
+            population_size=size,
+            num_epochs=1000,
+            mutation_prob=0.05
+        )
+        results[size] = (best_fitnesses, avg_fitnesses)
+
+    plt.figure(figsize=(12, 6))
+    for size, (best_fitnesses, avg_fitnesses) in results.items():
+        plt.plot(best_fitnesses, label=f'Population Size {size}')
+
+    plt.title('Comparison of Population Sizes')
+    plt.xlabel('Epoch')
+    plt.ylabel('Best Fitness (Distance)')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
+
+def compare_tournament_sizes(coordinates):
+    # Compares different tournament sizes.
+    tournament_sizes = [3, 5, 10]
+    results = {}
+
+    for size in tournament_sizes:
+        print(f"\nTesting tournament size: {size}")
+        best_solution, best_fitness, best_fitnesses, avg_fitnesses = run_genetic_algorithm_roulette(
+            coordinates,
+            population_size=100,
+            num_epochs=1000,
+            mutation_prob=0.05,
+            tournament_size=size
+        )
+        results[size] = (best_fitnesses, avg_fitnesses)
+
+    plt.figure(figsize=(12, 6))
+    for size, (best_fitnesses, avg_fitnesses) in results.items():
+        plt.plot(best_fitnesses, label=f'Tournament Size {size}')
+
+    plt.title('Comparison of Tournament Sizes')
+    plt.xlabel('Epoch')
+    plt.ylabel('Best Fitness (Distance)')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
+
 if __name__ == "__main__":
     # Load data
     coordinates = read_tsp_with_pandas()
@@ -290,10 +376,12 @@ if __name__ == "__main__":
     print("\nBest Solution Found:")
     print_solution_info(best_solution, best_fitness)
     run_random_solutions(coordinates, num_runs=1000)
+    
     # Compare mutation rates
     compare_mutation_rates_simple(coordinates)
     test_mutation = input("Test mutation rates 0.5 and 0.1? (y/n): ").strip().lower()
     compare_mutation_rates_simple(coordinates, test_mutation == 'y')
+    
     # Compare with greedy solution
     distance_matrix = precompute_distance_matrix(coordinates)
     greedy_solution = greedy_algorithm_with_matrix(1, coordinates, distance_matrix)
@@ -301,3 +389,8 @@ if __name__ == "__main__":
     print("\nGreedy Solution for Comparison:")
     print_solution_info(greedy_solution, greedy_fitness)
     print(f"\nImprovement over greedy: {((greedy_fitness - best_fitness) / greedy_fitness) * 100:.2f}%")
+    
+    # New comparison functions
+    compare_mutation_rates(coordinates)
+    compare_population_sizes(coordinates)
+    compare_tournament_sizes(coordinates)
